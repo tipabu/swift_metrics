@@ -7,9 +7,9 @@ from . import unpack
 
 import itertools
 
-def get_lsof_stats():
+def get_lsof_stats(prev_proc_infos=None):
     data = lsof_stats()
-    merge_proc_info(data)
+    proc_infos = merge_proc_info(data, prev_proc_infos)
     for item in data:
         server_sockets = [sock for sock in item['sockets'] if is_swift_port(sock['local'][1])]
         client_sockets = [sock for sock in item['sockets'] if not is_swift_port(sock['local'][1])]
@@ -75,7 +75,7 @@ def get_lsof_stats():
         stats.append(('client_connection_buffer', labels, metrics['rx_buffer']))
         labels['for'] = 'tx'
         stats.append(('client_connection_buffer', labels, metrics['tx_buffer']))
-    return stats
+    return stats, proc_infos
 
 def get_iptables_stats():
     return [
@@ -93,7 +93,8 @@ def get_iptables_stats():
 def label_str(labels):
     return '{' + ','.join(f'{label}="{val}"' for label, val in labels.items()) + '}'
 
-def stats_doc():
+def stats_doc(prev_proc_infos=None):
+    lsof_stats, proc_infos = get_lsof_stats(prev_proc_infos)
     return '''
 # HELP pcpu Current process CPU usage
 # TYPE pcpu gauge
@@ -117,4 +118,4 @@ def stats_doc():
 # TYPE client_connection_buffer gauge
 '''.lstrip() + ''.join(
     f'{name}{label_str(labels)} {value}\n'
-    for name, labels, value in itertools.chain(get_lsof_stats(), get_iptables_stats()))
+    for name, labels, value in itertools.chain(lsod_stats, get_iptables_stats())), proc_infos
