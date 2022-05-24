@@ -1,6 +1,15 @@
 import os
 import subprocess
 
+def calc_pcpu(times, etimes, prev_proc_info, pcpu):
+    if prev_proc_info and (float(etimes) - prev_proc_info['etimes']) != 0:
+        return ((int(times) - prev_proc_info['times']) /
+                (float(etimes) - prev_proc_info['etimes']))
+    if etimes:
+        return float(times)/int(etimes)
+    return float(pcpu)
+
+
 def merge_proc_info(items, prev_proc_infos):
     pids = {x['pid'] for x in items}
     cmd = ['ps', '-o', 'pid,pcpu,rss,vsize,etimes,times,command']
@@ -17,10 +26,7 @@ def merge_proc_info(items, prev_proc_infos):
         cmd, _, args = cmdline.partition(' ')
         cmd = os.path.basename(cmd)
         proc_infos[pid] = {
-            'pcpu': float(pcpu) if not int(times) else
-                    float(etimes)/int(times) if not prev_proc_info else
-                    (float(etimes) - prev_proc_info['etimes']) /
-                    (int(times) - prev_proc_info['times']),
+            'pcpu': calc_pcpu(times, etimes, prev_proc_info, pcpu),
             'rss': int(rss) * 1024,
             'vsize': int(vsize) * 1024,
             'etimes': int(etimes),

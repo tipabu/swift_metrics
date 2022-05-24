@@ -7,7 +7,7 @@ from . import unpack
 
 import itertools
 
-def get_lsof_stats(prev_proc_infos=None):
+def get_lsof_stats(prev_proc_infos):
     data = lsof_stats()
     proc_infos = merge_proc_info(data, prev_proc_infos)
     for item in data:
@@ -118,4 +118,4 @@ def stats_doc(prev_proc_infos=None):
 # TYPE client_connection_buffer gauge
 '''.lstrip() + ''.join(
     f'{name}{label_str(labels)} {value}\n'
-    for name, labels, value in itertools.chain(lsod_stats, get_iptables_stats())), proc_infos
+    for name, labels, value in itertools.chain(lsof_stats, get_iptables_stats())), proc_infos

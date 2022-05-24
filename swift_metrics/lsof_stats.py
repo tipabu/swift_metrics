@@ -1,4 +1,5 @@
 import subprocess
+import sys
 
 from . import MEMCACHE_PORT
 from . import is_swift_port
