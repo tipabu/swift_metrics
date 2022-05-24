@@ -5,7 +5,7 @@ def calc_pcpu(times, etimes, prev_proc_info, pcpu):
     if prev_proc_info and (float(etimes) - prev_proc_info['etimes']) != 0:
         return ((int(times) - prev_proc_info['times']) /
                 (float(etimes) - prev_proc_info['etimes']))
-    if etimes:
+    if etimes and int(etimes):
         return float(times)/int(etimes)
     return float(pcpu)
 

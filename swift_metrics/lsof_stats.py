@@ -6,13 +6,13 @@ from . import is_swift_port
 from . import parse_netloc
 
 def lsof(user):
-    return subprocess.check_output([
+    return subprocess.run([
         'lsof', '-a', '-P',
         '-u', user,
         '-i',
         '-T', 'sq',
         '-F', 'pRfnT0',
-    ], encoding='utf-8', stderr=subprocess.DEVNULL)
+    ], encoding='utf-8', stderr=subprocess.DEVNULL).stdout or ''
 
 def split_by_process(out):
     return [
