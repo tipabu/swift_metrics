@@ -12,7 +12,7 @@ def lsof(user):
         '-i',
         '-T', 'sq',
         '-F', 'pRfnT0',
-    ], encoding='utf-8', stderr=subprocess.DEVNULL).stdout or ''
+    ], encoding='utf-8', capture_output=True).stdout
 
 def split_by_process(out):
     return [

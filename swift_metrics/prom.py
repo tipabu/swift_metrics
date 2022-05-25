@@ -1,3 +1,4 @@
+from .df_stats import df_stats
 from .lsof_stats import lsof_stats
 from .ps_info import merge_proc_info
 from .iptables_counters import get_counters
@@ -90,6 +91,17 @@ def get_iptables_stats():
         # else: most likely, an unused object port
     ]
 
+def get_df_stats():
+    return [
+        (
+            'disk_space',
+            {'device': d['device'], 'mount': d['mount'], 'type': k},
+            d[k],
+        )
+        for d in df_stats()
+        for k in ('total', 'used', 'free')
+    ]
+
 def label_str(labels):
     return '{' + ','.join(f'{label}="{val}"' for label, val in labels.items()) + '}'
 
@@ -116,6 +128,12 @@ def stats_doc(prev_proc_infos=None):
 # TYPE client_connection_count gauge
 # HELP client_connection_buffer Total send/receive buffers for client traffic
 # TYPE client_connection_buffer gauge
+# HELP disk_space Total/used/free bytes
+# TYPE disk_space gauge
 '''.lstrip() + ''.join(
     f'{name}{label_str(labels)} {value}\n'
-    for name, labels, value in itertools.chain(lsof_stats, get_iptables_stats())), proc_infos
+    for name, labels, value in itertools.chain(
+        lsof_stats,
+        get_iptables_stats(),
+        get_df_stats(),
+    )), proc_infos
