@@ -1,6 +1,7 @@
 from .df_stats import df_stats
 from .lsof_stats import lsof_stats
 from .ps_info import merge_proc_info
+from .swift_stats import get_replication_stats
 from .iptables_counters import get_counters
 from . import categorize_destination_port
 from . import is_swift_port
@@ -39,11 +40,13 @@ def get_lsof_stats(prev_proc_infos):
     server_stats = {}
     server_counts = {}
     for item in data:
-        labels = {'pid': item['pid'], 'command': item['command']}
+        command = item.get('command', '[unknown]')
+        labels = {'pid': item['pid'], 'command': command}
         if 'server_port' in item:
             labels['port'] = item['server_port']
         for metric in ('pcpu', 'rss', 'vsize'):
-            stats.append((metric, labels, item[metric]))
+            if metric in item:
+                stats.append((metric, labels, item[metric]))
         for state, metrics in item.get('server_stats', {}).items():
             server_counts.setdefault(item['server_port'], 0)
             if state == 'LISTEN':
@@ -52,11 +55,11 @@ def get_lsof_stats(prev_proc_infos):
             for name, metric in metrics.items():
                 server_stats[item['server_port']][state][name] += metric
         for dest, state_to_metrics in item.get('client_stats', {}).items():
-            client_stats.setdefault(item['command'], {}).setdefault(dest, {})
+            client_stats.setdefault(command, {}).setdefault(dest, {})
             for state, metrics in state_to_metrics.items():
-                client_stats[item['command']][dest].setdefault(state, {'rx_buffer': 0, 'tx_buffer': 0, 'count': 0})
+                client_stats[command][dest].setdefault(state, {'rx_buffer': 0, 'tx_buffer': 0, 'count': 0})
                 for name, metric in metrics.items():
-                    client_stats[item['command']][dest][state][name] += metric
+                    client_stats[command][dest][state][name] += metric
 
     # Finished aggregating; start emitting
     for port, count in server_counts.items():
@@ -130,10 +133,15 @@ def stats_doc(prev_proc_infos=None):
 # TYPE client_connection_buffer gauge
 # HELP disk_space Total/used/free bytes
 # TYPE disk_space gauge
+# HELP partitions Primary/handoff partition count
+# TYPE partitions gauge
+# HELP suffixes Primary/handoff suffix count
+# TYPE suffixes gauge
 '''.lstrip() + ''.join(
     f'{name}{label_str(labels)} {value}\n'
     for name, labels, value in itertools.chain(
         lsof_stats,
         get_iptables_stats(),
         get_df_stats(),
+        get_replication_stats(),
     )), proc_infos

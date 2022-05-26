@@ -35,5 +35,9 @@ def merge_proc_info(items, prev_proc_infos):
             'args': args,
         }
     for item in items:
-        item.update(proc_infos.get(item['pid'], {}))
+        new_proc_info = proc_infos.get(item['pid'])
+        if new_proc_info:
+            item.update(new_proc_info)
+        elif prev_proc_infos:
+            item.update(prev_proc_infos.get(item['pid'], {}))
     return proc_infos

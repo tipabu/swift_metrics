@@ -1,7 +1,7 @@
 import subprocess
 import sys
 
-from . import MEMCACHE_PORT
+from . import MEMCACHE_PORT, RSYNC_PORT
 from . import is_swift_port
 from . import parse_netloc
 
@@ -61,7 +61,9 @@ def prune_sockets(proc_info):
         assert (
             is_swift_port(r['local'][1]) or
             is_swift_port(r['remote'][1]) or
-            r['remote'][1] == MEMCACHE_PORT)
+            r['remote'][1] in (RSYNC_PORT, MEMCACHE_PORT) or
+            r['local'][1] == RSYNC_PORT
+        ), f'Found unexpected socket {r!r}'
 
 def lsof_stats(user='swift'):
     data = [parse_process(x) for x in split_by_process(lsof('swift'))]

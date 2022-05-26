@@ -1,4 +1,5 @@
 MEMCACHE_PORT = 11211
+RSYNC_PORT = 873
 
 def is_swift_port(port):
     return port == 8080 or 6200 <= port <= 6300
@@ -11,6 +12,7 @@ def categorize_destination_port(port):
         6202: 'account',
         8080: 'proxy',
         11211: 'memcache',
+        873: 'rsync',
     }.get(port) or f'other ({port!r})'
 
 def parse_netloc(netloc):
