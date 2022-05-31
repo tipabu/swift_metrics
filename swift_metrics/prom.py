@@ -6,8 +6,11 @@ from .iptables_counters import get_counters
 from . import categorize_destination_port
 from . import is_swift_port
 from . import unpack
+from . import RSYNC_PORT
 
+import datetime
 import itertools
+import concurrent.futures
 
 def get_lsof_stats(prev_proc_infos):
     data = lsof_stats()
@@ -27,7 +30,11 @@ def get_lsof_stats(prev_proc_infos):
             item['server_stats'][sock['state']]['count'] += 1
 
         for sock in client_sockets:
-            dest = categorize_destination_port(sock['remote'][1])
+            if sock['local'][1] == RSYNC_PORT:
+                # rsync has some funny ephemeral port behaviors...
+                dest = 'rsync'
+            else:
+                dest = categorize_destination_port(sock['remote'][1])
             item.setdefault('client_stats', {}).setdefault(dest, {}).setdefault(
                 sock['state'], {'rx_buffer': 0, 'tx_buffer': 0, 'count': 0})
             item['client_stats'][dest][sock['state']]['rx_buffer'] += sock['QR']
@@ -110,6 +117,18 @@ def label_str(labels):
 
 def stats_doc(prev_proc_infos=None):
     lsof_stats, proc_infos = get_lsof_stats(prev_proc_infos)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        fs = [executor.submit(f) for f in (
+            get_iptables_stats,
+            get_df_stats,
+            get_replication_stats,
+        )]
+        done, not_done = concurrent.futures.wait(fs, timeout=5)
+        for f in not_done:
+            f.cancel()
+        all_stats = itertools.chain(lsof_stats, *(f.result() for f in done))
+    now = int((datetime.datetime.now() - datetime.datetime(1970, 1, 1)).total_seconds() * 1000)
+
     return '''
 # HELP pcpu Current process CPU usage
 # TYPE pcpu gauge
@@ -138,10 +157,5 @@ def stats_doc(prev_proc_infos=None):
 # HELP suffixes Primary/handoff suffix count
 # TYPE suffixes gauge
 '''.lstrip() + ''.join(
-    f'{name}{label_str(labels)} {value}\n'
-    for name, labels, value in itertools.chain(
-        lsof_stats,
-        get_iptables_stats(),
-        get_df_stats(),
-        get_replication_stats(),
-    )), proc_infos
+    f'{name}{label_str(labels)} {value} {now}\n'
+    for name, labels, value in all_stats), proc_infos

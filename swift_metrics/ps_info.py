@@ -7,7 +7,7 @@ def calc_pcpu(times, etimes, prev_proc_info, pcpu):
                 (float(etimes) - prev_proc_info['etimes']))
     if etimes and int(etimes):
         return float(times)/int(etimes)
-    return float(pcpu)
+    return float(pcpu)/100
 
 
 def merge_proc_info(items, prev_proc_infos):

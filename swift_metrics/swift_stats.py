@@ -1,7 +1,6 @@
 import collections
 import glob
 import os
-import pickle
 import pathlib
 import swift.obj.diskfile
 import swift.common.utils
@@ -15,18 +14,12 @@ my_ips = set(swift.common.utils.whataremyips())
 srv_node = pathlib.Path('/srv/node')
 def replication_stats():
     stats = {
-        'partitions': {
-            'primary': collections.defaultdict(lambda: collections.defaultdict(int)),
-            'handoff': collections.defaultdict(lambda: collections.defaultdict(int)),
-        },
-        'suffixes': {
-            'primary': collections.defaultdict(lambda: collections.defaultdict(int)),
-            'handoff': collections.defaultdict(lambda: collections.defaultdict(int)),
-        },
-        #'hashdirs': {
-        #    'primary': collections.defaultdict(lambda: collections.defaultdict(int)),
-        #    'handoff': collections.defaultdict(lambda: collections.defaultdict(int)),
-        #},
+        'partitions': collections.defaultdict(
+            lambda: collections.defaultdict(lambda: {'primary': 0, 'handoff': 0})),
+        'suffixes': collections.defaultdict(
+            lambda: collections.defaultdict(lambda: {'primary': 0, 'handoff': 0})),
+        #'hashdirs': collections.defaultdict(
+        #    lambda: collections.defaultdict(lambda: {'primary': 0, 'handoff': 0})),
         # TODO: would love to add in hashdirs and bytes, but it's going to
         # increase runtime and i/o load -- *way* better if we can get those
         # into hashes.pkl on a rehash
@@ -52,16 +45,18 @@ def replication_stats():
                     p = int(part.name)
                 except ValueError:
                     continue
-                hashes = swift.obj.diskfile.read_hashes(part)
                 ph = ('primary' if dev['id'] in [
                     d['id'] for d in ring.get_part_nodes(p)
                 ] else 'handoff')
-                stats['partitions'][ph][dev['device']][policy.name] += 1
+                stats['partitions'][dev['device']][policy.name][ph] += 1
+
+                # TODO: this only works for object policies
+                hashes = swift.obj.diskfile.read_hashes(part)
                 for h in hashes:
                     if not swift.obj.diskfile.valid_suffix(h):
                         continue
-                    stats['suffixes'][ph][dev['device']][policy.name] += 1
-                    #stats['hashdirs'][ph][dev['device']][policy.name] += (part / h).stat().st_nlink - 2
+                    stats['suffixes'][dev['device']][policy.name][ph] += 1
+                    #stats['hashdirs'][dev['device']][policy.name][ph] += (part / h).stat().st_nlink - 2
     return stats
 
 def get_replication_stats():
@@ -73,7 +68,7 @@ def get_replication_stats():
             value,
         )
         for stat in data
-        for typ in data[stat]
-        for disk in data[stat][typ]
-        for policy, value in data[stat][typ][disk].items()
+        for disk in data[stat]
+        for policy in data[stat][disk]
+        for typ, value in data[stat][disk][policy].items()
     ]
