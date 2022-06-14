@@ -25,38 +25,42 @@ def replication_stats():
         # into hashes.pkl on a rehash
     }
     for disk in srv_node.iterdir():
-        for policy in disk.iterdir():
-            try:
-                ring = rings[policy.name.replace('s', '')]
-            except KeyError:
-                # tmp or async_pending, most likely
-                continue
-
-            try:
-                dev = next(dev for dev in ring.devs
-                           if dev and dev['device'] == disk.name
-                           and (my_ips & {dev['ip'], dev['replication_ip']}))
-            except StopIteration:
-                # dev not in ring; always handoff
-                dev = None
-
-            for part in policy.iterdir():
+        try:
+            for policy in disk.iterdir():
                 try:
-                    p = int(part.name)
-                except ValueError:
+                    ring = rings[policy.name.replace('s', '')]
+                except KeyError:
+                    # tmp or async_pending, most likely
                     continue
-                ph = ('primary' if dev['id'] in [
-                    d['id'] for d in ring.get_part_nodes(p)
-                ] else 'handoff')
-                stats['partitions'][dev['device']][policy.name][ph] += 1
 
-                # TODO: this only works for object policies
-                hashes = swift.obj.diskfile.read_hashes(part)
-                for h in hashes:
-                    if not swift.obj.diskfile.valid_suffix(h):
+                try:
+                    dev = next(dev for dev in ring.devs
+                               if dev and dev['device'] == disk.name
+                               and (my_ips & {dev['ip'], dev['replication_ip']}))
+                except StopIteration:
+                    # dev not in ring; always handoff
+                    dev = None
+
+                for part in policy.iterdir():
+                    try:
+                        p = int(part.name)
+                    except ValueError:
                         continue
-                    stats['suffixes'][dev['device']][policy.name][ph] += 1
-                    #stats['hashdirs'][dev['device']][policy.name][ph] += (part / h).stat().st_nlink - 2
+                    ph = ('primary' if dev and dev['id'] in [
+                        d['id'] for d in ring.get_part_nodes(p)
+                    ] else 'handoff')
+                    stats['partitions'][dev['device']][policy.name][ph] += 1
+
+                    # TODO: this only works for object policies
+                    hashes = swift.obj.diskfile.read_hashes(part)
+                    for h in hashes:
+                        if not swift.obj.diskfile.valid_suffix(h):
+                            continue
+                        stats['suffixes'][dev['device']][policy.name][ph] += 1
+                        #stats['hashdirs'][dev['device']][policy.name][ph] += (part / h).stat().st_nlink - 2
+        except OSError:
+            # failed disk? maybe at some point we should unmount it
+            pass
     return stats
 
 def get_replication_stats():
