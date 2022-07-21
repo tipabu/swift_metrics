@@ -68,18 +68,18 @@ class ClientConnectionBufferStat(Stat):
 
 
 class ProcessTracker(Tracker):
-    def configure(self, conf):
+    def configure(self, conf: typing.Dict[str, str]) -> None:
         self.swift_user = conf.get('user', 'swift')
-        self.process_tree = {}
+        self.process_tree: typing.Dict[int, typing.Dict[str, typing.Any]] = {}
 
-    def get_stats(self):
+    def get_stats(self) -> WriteOnceStatCollection:
         cmd = [
             'ps', '--no-headers',
             '-o', 'sid,ppid,pid,pcpu,rss,vsize,etimes,times,command',
             '-u', self.swift_user,
         ]
         sids = set()
-        new_process_tree = {}
+        new_process_tree: typing.Dict[int, typing.Dict[str, typing.Any]] = {}
         for line in subprocess.run(
             cmd,
             check=True,
@@ -87,19 +87,12 @@ class ProcessTracker(Tracker):
             encoding='utf8',
         ).stdout.strip().split('\n'):
             sid, ppid, pid, pcpu, rss, vsize, etimes, times, cmdline = \
-                line.split(None, 8)
-            sid = int(sid)
-            ppid = int(ppid)
-            pid = int(pid)
-            pcpu = float(pcpu)
-            rss = int(rss)
-            vsize = int(vsize)
-            etimes = int(etimes)
-            times = int(times)
-            cmd, _, args = cmdline.partition(' ')
-            if 'python' in cmd:
-                cmd, _, args = args.partition(' ')
-            cmd = os.path.basename(cmd)
+                (t(v) for v, t in zip(line.split(None, 8), (
+                    int, int, int, float, int, int, int, int, str)))
+            cmdname, _, args = cmdline.partition(' ')
+            if 'python' in cmdname:
+                cmdname, _, args = args.partition(' ')
+            cmdname = os.path.basename(cmdname)
             if pid in self.process_tree \
                     and self.process_tree[pid]['etimes'] != etimes:
                 pcpu = (times - self.process_tree[pid]['times']) / (
@@ -116,7 +109,7 @@ class ProcessTracker(Tracker):
                 'vsize': vsize,
                 'etimes': etimes,
                 'times': times,
-                'cmd': cmd,
+                'cmd': cmdname,
                 'args': args,
             })
             pid_dict.update(get_disk_io_stats(pid))
@@ -149,8 +142,8 @@ class ProcessTracker(Tracker):
         return stats
 
 
-def get_disk_io_stats(pid):
-    result = {
+def get_disk_io_stats(pid: int) -> typing.Dict[str, int]:
+    io_stats = {
         'read_bytes': 0,
         'write_bytes': 0,
     }
@@ -158,16 +151,16 @@ def get_disk_io_stats(pid):
         with open(f'/proc/{pid}/io') as fp:
             for line in fp:
                 if line.startswith('read_bytes: '):
-                    result['read_bytes'] = int(line.split()[1])
+                    io_stats['read_bytes'] = int(line.split()[1])
                 elif line.startswith('write_bytes: '):
-                    result['write_bytes'] = int(line.split()[1])
+                    io_stats['write_bytes'] = int(line.split()[1])
     except IOError:
         pass
-    return result
+    return io_stats
 
 
-def get_connection_stats(pid):
-    result = {}
+def get_connection_stats(pid: int) -> typing.Dict[str, typing.Any]:
+    result: typing.Dict[str, typing.Any] = {}
     info = subprocess.run([
         'lsof', '-a', '-n', '-P',
         '-p', str(pid),
@@ -184,7 +177,7 @@ def get_connection_stats(pid):
         if line.startswith('p'):
             assert line == f'p{pid}\x00', f'{line!r} != "p{pid}"'
             continue
-        conn = {}
+        conn: typing.Dict[str, typing.Any] = {}
         for part in line.strip('\x00').split('\x00'):
             if part.startswith('f'):
                 conn['fd'] = int(part[1:])
@@ -228,7 +221,10 @@ def get_connection_stats(pid):
     return result
 
 
-def make_stats(pid_dict, now):
+def make_stats(
+    pid_dict: typing.Dict[str, typing.Any],
+    now: int
+) -> WriteOnceStatCollection:
     stats = WriteOnceStatCollection((
         PCPUStat(pid_dict['pcpu'], now, (
             ("pid", pid_dict['pid']),

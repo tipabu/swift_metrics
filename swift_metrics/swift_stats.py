@@ -33,16 +33,18 @@ class HashdirCountStat(Stat):
 
 
 class SwiftRingAssignmentTracker(Tracker):
-    def configure(self, conf):
+    def configure(self, conf: typing.Dict[str, str]) -> None:
         self.devices_path = pathlib.Path(conf.get('devices', '/srv/node'))
         self.rings = {
             os.path.basename(r).split('.')[0]: swift.common.ring.Ring(r)
             for r in glob.glob('/etc/swift/*.ring.gz')}
         # TODO: support ring_ip config opt
         self.my_ips = set(swift.common.utils.whataremyips())
-        self.worker_queue = queue.Queue()
+        self.worker_queue: queue.Queue[Stat] = queue.Queue()
         self.workers = [
             SwiftDiskRingAssignmentTracker(self.worker_queue, {
+                # slight abuse: conf dicts are usually str -> str mappings,
+                # but this was handy
                 'disk': disk,
                 'manager': self,
             }) for disk in self.devices_path.iterdir()
@@ -51,12 +53,12 @@ class SwiftRingAssignmentTracker(Tracker):
         self.track_hashdirs = swift.common.utils.config_true_value(
             conf.get('track_hashdirs', 'true'))
 
-    def start(self):
+    def start(self) -> None:
         for t in self.workers:
             t.start()
         super().start()
 
-    def get_stats(self):
+    def get_stats(self) -> WriteOnceStatCollection:
         for t in self.workers:
             t.ever_reported.wait()
 
@@ -72,19 +74,19 @@ class SwiftRingAssignmentTracker(Tracker):
 class SwiftDiskRingAssignmentTracker(Tracker):
     interval = 60  # seconds
 
-    def configure(self, conf):
+    def configure(self, conf: typing.Dict[str, typing.Any]) -> None:
         self.disk = conf['disk']
         self.manager = conf['manager']
 
-    def scrape_time_labels(self):
+    def scrape_time_labels(self) -> typing.Tuple[typing.Tuple[str, str], ...]:
         return super().scrape_time_labels() + (
             ("device", self.disk.name),
         )
 
-    def get_stats(self):
-        ret = WriteOnceStatCollection()
+    def get_stats(self) -> WriteOnceStatCollection:
+        stats = WriteOnceStatCollection()
         for policy in self.disk.iterdir():
-            stats = {
+            stat_dict = {
                 'partitions': {'primary': 0, 'handoff': 0},
                 'suffixes': {'primary': 0, 'handoff': 0},
                 'hashdirs': {'primary': 0, 'handoff': 0},
@@ -114,7 +116,7 @@ class SwiftDiskRingAssignmentTracker(Tracker):
                     ph = ('primary' if dev and dev['id'] in [
                         d['id'] for d in ring.get_part_nodes(p)
                     ] else 'handoff')
-                    stats['partitions'][ph] += 1
+                    stat_dict['partitions'][ph] += 1
 
                     # TODO: this only works for object policies
                     hashes = {'valid': False}
@@ -124,57 +126,69 @@ class SwiftDiskRingAssignmentTracker(Tracker):
                         for h in hashes:
                             if not swift.obj.diskfile.valid_suffix(h):
                                 continue
-                            stats['suffixes'][ph] += 1
+                            stat_dict['suffixes'][ph] += 1
                             if self.manager.track_hashdirs:
-                                stats['hashdirs'][ph] += (part / h).stat().st_nlink - 2
+                                stat_dict['hashdirs'][ph] += (part / h).stat().st_nlink - 2
                     else:
                         for suf in part.iterdir():
                             if not swift.obj.diskfile.valid_suffix(suf.name):
                                 continue
-                            stats['suffixes'][ph] += 1
+                            stat_dict['suffixes'][ph] += 1
                             if self.manager.track_hashdirs:
-                                stats['hashdirs'][ph] += suf.stat().st_nlink - 2
+                                stat_dict['hashdirs'][ph] += suf.stat().st_nlink - 2
 
                 now = Stat.now()
-                ret.update(
-                    PartitionCountStat(stats["partitions"]["primary"], now, (
-                        ("device", self.disk.name),
-                        ("policy", policy.name),
-                        ("type", "primary"),
-                    )),
-                    PartitionCountStat(stats["partitions"]["handoff"], now, (
-                        ("device", self.disk.name),
-                        ("policy", policy.name),
-                        ("type", "handoff"),
-                    )),
-                    SuffixCountStat(stats["suffixes"]["primary"], now, (
-                        ("device", self.disk.name),
-                        ("policy", policy.name),
-                        ("type", "primary"),
-                    )),
-                    SuffixCountStat(stats["suffixes"]["handoff"], now, (
-                        ("device", self.disk.name),
-                        ("policy", policy.name),
-                        ("type", "handoff"),
-                    )),
-                )
-                if self.manager.track_hashdirs:
-                    ret.update(
-                        HashdirCountStat(stats["hashdirs"]["primary"], now, (
+                stats.update(
+                    PartitionCountStat(
+                        stat_dict["partitions"]["primary"], now, (
                             ("device", self.disk.name),
                             ("policy", policy.name),
                             ("type", "primary"),
-                        )),
-                        HashdirCountStat(stats["hashdirs"]["handoff"], now, (
+                        )
+                    ),
+                    PartitionCountStat(
+                        stat_dict["partitions"]["handoff"], now, (
                             ("device", self.disk.name),
                             ("policy", policy.name),
                             ("type", "handoff"),
-                        )),
+                        )
+                    ),
+                    SuffixCountStat(
+                        stat_dict["suffixes"]["primary"], now, (
+                            ("device", self.disk.name),
+                            ("policy", policy.name),
+                            ("type", "primary"),
+                        )
+                    ),
+                    SuffixCountStat(
+                        stat_dict["suffixes"]["handoff"], now, (
+                            ("device", self.disk.name),
+                            ("policy", policy.name),
+                            ("type", "handoff"),
+                        )
+                    ),
+                )
+                if self.manager.track_hashdirs:
+                    stats.update(
+                        HashdirCountStat(
+                            stat_dict["hashdirs"]["primary"], now, (
+                                ("device", self.disk.name),
+                                ("policy", policy.name),
+                                ("type", "primary"),
+                            )
+                        ),
+                        HashdirCountStat(
+                            stat_dict["hashdirs"]["handoff"], now, (
+                                ("device", self.disk.name),
+                                ("policy", policy.name),
+                                ("type", "handoff"),
+                            )
+                        ),
                     )
             except OSError:
                 # failed disk? maybe at some point we should unmount it
                 pass
-        return ret
+        return stats
 
 
 if __name__ == "__main__":

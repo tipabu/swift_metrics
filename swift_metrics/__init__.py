@@ -12,11 +12,11 @@ MEMCACHE_PORT = 11211
 RSYNC_PORT = 873
 
 
-def is_swift_port(port):
+def is_swift_port(port: int) -> bool:
     return port == 8080 or 6200 <= port <= 6300
 
 
-def categorize_destination_port(port):
+def categorize_destination_port(port: int) -> str:
     port = int(port)
     if port == 6200 or 6203 <= port <= 6300:
         return 'object'
@@ -29,22 +29,11 @@ def categorize_destination_port(port):
     }.get(port) or f'other ({port!r})'
 
 
-def parse_netloc(netloc):
+def parse_netloc(netloc: str) -> typing.Optional[typing.Tuple[str, int]]:
     if not netloc:
         return None
     host, port = netloc.rpartition(':')[::2]
     return (host, int(port))
-
-
-def unpack(d, lvl=1):
-    assert lvl >= 1
-    if lvl == 1:
-        for key, val in d.items():
-            yield key, val
-        return
-    for key, val in d.items():
-        for items in unpack(val, lvl-1):
-            yield (key, ) + items
 
 
 @dataclasses.dataclass(frozen=True)
@@ -84,7 +73,7 @@ class Stat:
         buf.write('\n')
         return buf.getvalue()
 
-    def zero(self):
+    def zero(self) -> "Stat":
         return dataclasses.replace(self, value=0)
 
 
@@ -100,15 +89,15 @@ class StatCollection(collections.abc.Iterable):
         if stats:
             self.update(*stats)
 
-    def __iter__(self):
+    def __iter__(self) -> typing.Iterator[Stat]:
         yield from self._stats.values()
 
-    def update(self, *stats: Stat):
+    def update(self, *stats: Stat) -> None:
         for stat in stats:
             key = dataclasses.replace(stat, value=0, timestamp=None)
             self._stats[key] = stat
 
-    def merge(self, other: "StatCollection"):
+    def merge(self, other: typing.Iterable[Stat]) -> None:
         self.update(*other)
 
     def doc(self) -> str:
@@ -119,7 +108,7 @@ class StatCollection(collections.abc.Iterable):
 
 
 class WriteOnceStatCollection(StatCollection):
-    def update(self, *stats: Stat):
+    def update(self, *stats: Stat) -> None:
         for stat in stats:
             key = dataclasses.replace(stat, value=0, timestamp=None)
             if key in self._stats:
@@ -137,15 +126,15 @@ class Tracker(threading.Thread):
         self.daemon = True
         self.configure(conf)
 
-    def configure(self, conf):
+    def configure(self, conf: dict) -> None:
         """Hook for subclasses to validate and extract config"""
 
-    def scrape_time_labels(self):
+    def scrape_time_labels(self) -> typing.Tuple[typing.Tuple[str, str], ...]:
         return (
             ("tracker", self.__class__.__name__),
         )
 
-    def run(self):
+    def run(self) -> None:
         while True:
             start = time.time()
             any_stats = False
@@ -168,8 +157,8 @@ class Tracker(threading.Thread):
         raise NotImplementedError
 
     @classmethod
-    def main(cls):
-        statq = queue.Queue()
+    def main(cls) -> None:
+        statq: queue.Queue[Stat] = queue.Queue()
         thread = cls(statq, {})
         thread.start()
         stats = StatCollection()

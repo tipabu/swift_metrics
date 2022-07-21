@@ -1,3 +1,4 @@
+from . import Stat
 from . import StatCollection
 from . import WriteOnceStatCollection
 from .df_stats import DiskTracker
@@ -20,14 +21,14 @@ class Manager(threading.Thread):
         ProcessTracker,
     )
 
-    def __init__(self):
-        self.statq = queue.Queue()
+    def __init__(self) -> None:
+        self.statq: queue.Queue[Stat] = queue.Queue()
         self.stats = StatCollection()
         self.workers = [cls(self.statq, {}) for cls in self.WORKER_CLASSES]
         super().__init__()
         self.daemon = True
 
-    def run(self):
+    def run(self) -> None:
         for t in self.workers:
             t.start()
         while all(t.is_alive() for t in self.workers):
@@ -46,7 +47,7 @@ m.start()
 
 
 if 'server' in sys.argv or 'serve' in sys.argv:
-    def app(env, start_response):
+    def app(env, start_response):  # type: ignore
         if env['PATH_INFO'] != '/metrics':
             start_response('404 Not Found', [('Content-Type', 'text/plain')])
             return [b'Not Found']

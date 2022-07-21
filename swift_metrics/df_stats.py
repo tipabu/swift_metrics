@@ -15,10 +15,10 @@ class DiskStat(Stat):
 
 
 class DiskTracker(Tracker):
-    def configure(self, conf):
+    def configure(self, conf: typing.Dict[str, str]) -> None:
         self.devices_path = pathlib.Path(conf.get('devices', '/srv/node'))
 
-    def get_stats(self):
+    def get_stats(self) -> WriteOnceStatCollection:
         mounts = tuple(self.devices_path / x
                        for x in os.listdir(self.devices_path))
         lines = [
