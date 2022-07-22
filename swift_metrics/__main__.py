@@ -58,7 +58,7 @@ if 'server' in sys.argv or 'serve' in sys.argv:
         ])
         return [body]
 
-    with wsgiref.simple_server.make_server('', 8001, app) as httpd:
+    with wsgiref.simple_server.make_server('', 8000, app) as httpd:
         httpd.serve_forever()
 
 else:
