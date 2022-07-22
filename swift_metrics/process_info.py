@@ -282,6 +282,7 @@ def make_stats(
                     ("command", pid_dict['cmd']),
                     ('port', str(port)),
                     ('type', categorize_destination_port(port)),
+                    ('state', state),
                 )),
                 ClientConnectionBufferStat(state_dict['recv_buffer'], now, (
                     ("pid", pid_dict['pid']),
