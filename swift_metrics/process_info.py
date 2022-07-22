@@ -228,23 +228,23 @@ def make_stats(
     stats = WriteOnceStatCollection((
         PCPUStat(pid_dict['pcpu'], now, (
             ("pid", pid_dict['pid']),
-            ("cmd", pid_dict['cmd']),
+            ("command", pid_dict['cmd']),
         )),
         RSSStat(pid_dict['rss'], now, (
             ("pid", pid_dict['pid']),
-            ("cmd", pid_dict['cmd']),
+            ("command", pid_dict['cmd']),
         )),
         VSizeStat(pid_dict['vsize'], now, (
             ("pid", pid_dict['pid']),
-            ("cmd", pid_dict['cmd']),
+            ("command", pid_dict['cmd']),
         )),
         ReadBytesStat(pid_dict['read_bytes'], now, (
             ("pid", pid_dict['pid']),
-            ("cmd", pid_dict['cmd']),
+            ("command", pid_dict['cmd']),
         )),
         WriteBytesStat(pid_dict['write_bytes'], now, (
             ("pid", pid_dict['pid']),
-            ("cmd", pid_dict['cmd']),
+            ("command", pid_dict['cmd']),
         )),
     ))
     for port, port_dict in pid_dict.get('server', {}).items():
