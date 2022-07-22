@@ -252,11 +252,14 @@ def make_stats(
             stats.update(
                 ServerConnectionCountStat(state_dict['connections'], now, (
                     ("pid", pid_dict['pid']),
+                    ("command", pid_dict['cmd']),
                     ('port', str(port)),
                     ('type', categorize_destination_port(port)),
+                    ('state', state),
                 )),
                 ServerConnectionBufferStat(state_dict['recv_buffer'], now, (
                     ("pid", pid_dict['pid']),
+                    ("command", pid_dict['cmd']),
                     ('port', str(port)),
                     ('type', categorize_destination_port(port)),
                     ('state', state),
@@ -264,6 +267,7 @@ def make_stats(
                 )),
                 ServerConnectionBufferStat(state_dict['send_buffer'], now, (
                     ("pid", pid_dict['pid']),
+                    ("command", pid_dict['cmd']),
                     ('port', str(port)),
                     ('type', categorize_destination_port(port)),
                     ('state', state),
@@ -275,11 +279,13 @@ def make_stats(
             stats.update(
                 ClientConnectionCountStat(state_dict['connections'], now, (
                     ("pid", pid_dict['pid']),
+                    ("command", pid_dict['cmd']),
                     ('port', str(port)),
                     ('type', categorize_destination_port(port)),
                 )),
                 ClientConnectionBufferStat(state_dict['recv_buffer'], now, (
                     ("pid", pid_dict['pid']),
+                    ("command", pid_dict['cmd']),
                     ('port', str(port)),
                     ('type', categorize_destination_port(port)),
                     ('state', state),
@@ -287,6 +293,7 @@ def make_stats(
                 )),
                 ClientConnectionBufferStat(state_dict['send_buffer'], now, (
                     ("pid", pid_dict['pid']),
+                    ("command", pid_dict['cmd']),
                     ('port', str(port)),
                     ('type', categorize_destination_port(port)),
                     ('state', state),
