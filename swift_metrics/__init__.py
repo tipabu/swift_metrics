@@ -89,6 +89,10 @@ class StatCollection(collections.abc.Iterable):
         if stats:
             self.update(*stats)
 
+    def __len__(self) -> int:
+        # also gets us bool()
+        return len(self._stats)
+
     def __iter__(self) -> typing.Iterator[Stat]:
         yield from self._stats.values()
 

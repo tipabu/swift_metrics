@@ -52,6 +52,8 @@ class SwiftRingAssignmentTracker(Tracker):
         self.stats = StatCollection()
         self.track_hashdirs = swift.common.utils.config_true_value(
             conf.get('track_hashdirs', 'true'))
+        # lie; this scrape can take *forever* when rsync's got disks pegged
+        self.ever_reported.set()
 
     def start(self) -> None:
         for t in self.workers:
@@ -188,6 +190,11 @@ class SwiftDiskRingAssignmentTracker(Tracker):
             except OSError:
                 # failed disk? maybe at some point we should unmount it
                 pass
+
+        if not stats:
+            # Normally, the super() code handles this -- but even if we don't
+            # have any data, we want to count as reported
+            self.ever_reported.set()
         return stats
 
 
