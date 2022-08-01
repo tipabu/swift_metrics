@@ -211,6 +211,12 @@ def get_connection_stats(pid: int) -> typing.Dict[str, typing.Any]:
             port_dict = result.setdefault('client', {}).setdefault(port, {})
 
         if conn['state'] not in port_dict:
+            for state in ('ESTABLISHED', 'CLOSE_WAIT'):
+                port_dict.setdefault(state, {
+                    'connections': 0,
+                    'recv_buffer': 0,
+                    'send_buffer': 0,
+                })
             port_dict[conn['state']] = {
                 'connections': 0,
                 'recv_buffer': 0,
