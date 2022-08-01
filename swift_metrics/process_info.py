@@ -120,9 +120,6 @@ class ProcessTracker(Tracker):
             new_process_tree.setdefault(ppid, {}).setdefault(
                 'children', {})[pid] = pid_dict
 
-        assert set(new_process_tree[1]["children"].keys()) == sids, \
-            f'{set(new_process_tree[1]["children"].keys())} != {sids}'
-
         now = Stat.now()
         old_process_tree, self.process_tree = \
             self.process_tree, new_process_tree
@@ -133,12 +130,12 @@ class ProcessTracker(Tracker):
         stats = WriteOnceStatCollection(itertools.chain.from_iterable(
             make_stats(pid_dict, now)
             for pid, pid_dict in self.process_tree.items()
-            if pid != 1
+            if 'pcpu' in pid_dict
         ))
         # zero out stale info
         # TODO: buffer these for more than one scrape -- but how long?
         for pid, pid_dict in old_process_tree.items():
-            if pid in self.process_tree:
+            if pid in self.process_tree or 'pcpu' not in pid_dict:
                 continue
             stats.merge(stat.zero() for stat in make_stats(pid_dict, now))
         return stats
