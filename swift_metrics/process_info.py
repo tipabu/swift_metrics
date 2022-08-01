@@ -97,6 +97,8 @@ class ProcessTracker(Tracker):
                     and self.process_tree[pid]['etimes'] != etimes:
                 pcpu = (times - self.process_tree[pid]['times']) / (
                     etimes - self.process_tree[pid]['etimes'])
+            else:
+                pcpu /= 100
 
             sids.add(sid)
 
