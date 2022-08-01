@@ -51,7 +51,7 @@ class SwiftRingAssignmentTracker(Tracker):
         ]
         self.stats = StatCollection()
         self.track_hashdirs = swift.common.utils.config_true_value(
-            conf.get('track_hashdirs', 'true'))
+            conf.get('track_hashdirs', 'false'))
         # lie; this scrape can take *forever* when rsync's got disks pegged
         self.ever_reported.set()
 
