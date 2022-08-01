@@ -133,7 +133,6 @@ class ProcessTracker(Tracker):
             if 'pcpu' in pid_dict
         ))
         # zero out stale info
-        # TODO: buffer these for more than one scrape -- but how long?
         for pid, pid_dict in old_process_tree.items():
             if pid in self.process_tree or 'pcpu' not in pid_dict:
                 continue

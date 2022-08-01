@@ -104,6 +104,11 @@ class StatCollection(collections.abc.Iterable):
     def merge(self, other: typing.Iterable[Stat]) -> None:
         self.update(*other)
 
+    def prune(self, max_age_ms: int) -> None:
+        now = Stat.now()
+        self._stats = {k: v for k, v in self._stats.items()
+                       if v.timestamp and v.timestamp + max_age_ms >= now}
+
     def doc(self) -> str:
         stats = list(self)
         doc = [t.header() for t in set(type(s) for s in stats)]

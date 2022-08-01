@@ -20,6 +20,7 @@ class Manager(threading.Thread):
         SwiftRingAssignmentTracker,
         ProcessTracker,
     )
+    MAX_AGE = 150  # seconds
 
     def __init__(self) -> None:
         self.statq: queue.Queue[Stat] = queue.Queue()
@@ -31,8 +32,15 @@ class Manager(threading.Thread):
     def run(self) -> None:
         for t in self.workers:
             t.start()
+        last = time.time()
         while all(t.is_alive() for t in self.workers):
             self.stats.update(self.statq.get())
+            if time.time() - last > self.MAX_AGE:
+                self.stats.prune(self.MAX_AGE * 1000)
+                last = min(
+                    (s.timestamp / 1000 for s in self.stats
+                     if s.timestamp is not None),
+                    default=time.time())
 
     def get_stats(self) -> WriteOnceStatCollection:
         for t in self.workers:
