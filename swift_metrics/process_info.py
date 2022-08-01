@@ -201,11 +201,13 @@ def get_connection_stats(pid: int) -> typing.Dict[str, typing.Any]:
             # sometimes eventlet talks to itself
             continue
         port = conn['local'][1]
-        if is_swift_port(port):
+        if is_swift_port(port) or port == RSYNC_PORT:
             port_dict = result.setdefault('server', {}).setdefault(port, {})
         else:
             port = conn['remote'][1]
-            assert is_swift_port(port) or port in (MEMCACHE_PORT, RSYNC_PORT)
+            if not is_swift_port(port) and port not in (MEMCACHE_PORT, RSYNC_PORT):
+                print(f'Found unexpected connection {conn}')
+                continue
             port_dict = result.setdefault('client', {}).setdefault(port, {})
 
         if conn['state'] not in port_dict:
