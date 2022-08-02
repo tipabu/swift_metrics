@@ -72,6 +72,12 @@ class ProcessTracker(Tracker):
         self.swift_user = conf.get('user', 'swift')
         self.process_tree: typing.Dict[int, typing.Dict[str, typing.Any]] = {}
 
+        self.clk_tck = int(subprocess.run(
+            ['getconf', 'CLK_TCK'],
+            check=True,
+            capture_output=True,
+        ).stdout)
+
     def get_stats(self) -> WriteOnceStatCollection:
         cmd = [
             'ps', '--no-headers',
@@ -89,10 +95,25 @@ class ProcessTracker(Tracker):
             sid, ppid, pid, pcpu, rss, vsize, etimes, times, cmdline = \
                 (t(v) for v, t in zip(line.split(None, 8), (
                     int, int, int, float, int, int, int, int, str)))
+
             cmdname, _, args = cmdline.partition(' ')
             if 'python' in cmdname:
                 cmdname, _, args = args.partition(' ')
             cmdname = os.path.basename(cmdname)
+
+            try:
+                proc_info = open(f'/proc/{pid}/stat').read().split()
+                utime = float(proc_info[13]) / self.clk_tck
+                ktime = float(proc_info[14]) / self.clk_tck
+                starttime = float(proc_info[21]) / self.clk_tck
+                # get this fresh for each pid in case there's some delay
+                uptime = float(open(f'/proc/uptime').read().split()[0])
+            except OSError:
+                pass
+            else:
+                times = utime + ktime
+                etimes = uptime - starttime
+
             if pid in self.process_tree \
                     and self.process_tree[pid]['etimes'] != etimes:
                 pcpu = (times - self.process_tree[pid]['times']) / (
