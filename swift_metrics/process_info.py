@@ -88,7 +88,8 @@ class ProcessTracker(Tracker):
         new_process_tree: typing.Dict[int, typing.Dict[str, typing.Any]] = {}
         for line in subprocess.run(
             cmd,
-            check=True,
+            # There may be no swift processes running, causing ps to exit 1
+            check=False,
             capture_output=True,
             encoding='utf8',
         ).stdout.strip().split('\n'):
