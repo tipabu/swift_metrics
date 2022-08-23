@@ -123,7 +123,7 @@ class SwiftDiskRingAssignmentTracker(Tracker):
                     # TODO: this only works for object policies
                     hashes = {'valid': False}
                     if policy.name.startswith('object'):
-                        hashes = swift.obj.diskfile.read_hashes(part)
+                        hashes = swift.obj.diskfile.consolidate_hashes(part)
                     if hashes['valid']:
                         for h in hashes:
                             if not swift.obj.diskfile.valid_suffix(h):
