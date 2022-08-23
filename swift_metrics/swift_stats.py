@@ -121,7 +121,6 @@ class SwiftDiskRingAssignmentTracker(Tracker):
                     ] else 'handoff')
                     stat_dict['partitions'][ph] += 1
 
-                    # TODO: this only works for object policies
                     hashes = {'valid': False}
                     if policy.name.startswith('object'):
                         hashes = swift.obj.diskfile.consolidate_hashes(part)
@@ -157,39 +156,61 @@ class SwiftDiskRingAssignmentTracker(Tracker):
                             ("type", "handoff"),
                         )
                     ),
-                    SuffixCountStat(
-                        stat_dict["suffixes"]["primary"]["valid"], now, (
-                            ("device", self.disk.name),
-                            ("policy", policy.name),
-                            ("type", "primary"),
-                            ("status", "valid"),
-                        )
-                    ),
-                    SuffixCountStat(
-                        stat_dict["suffixes"]["handoff"]["valid"], now, (
-                            ("device", self.disk.name),
-                            ("policy", policy.name),
-                            ("type", "handoff"),
-                            ("status", "valid"),
-                        )
-                    ),
-                    SuffixCountStat(
-                        stat_dict["suffixes"]["primary"]["invalid"], now, (
-                            ("device", self.disk.name),
-                            ("policy", policy.name),
-                            ("type", "primary"),
-                            ("status", "invalid"),
-                        )
-                    ),
-                    SuffixCountStat(
-                        stat_dict["suffixes"]["handoff"]["invalid"], now, (
-                            ("device", self.disk.name),
-                            ("policy", policy.name),
-                            ("type", "handoff"),
-                            ("status", "invalid"),
-                        )
-                    ),
                 )
+
+                if policy.name.startswith('object'):
+                    stats.update(
+                        SuffixCountStat(
+                            stat_dict["suffixes"]["primary"]["valid"], now, (
+                                ("device", self.disk.name),
+                                ("policy", policy.name),
+                                ("type", "primary"),
+                                ("status", "valid"),
+                            )
+                        ),
+                        SuffixCountStat(
+                            stat_dict["suffixes"]["handoff"]["valid"], now, (
+                                ("device", self.disk.name),
+                                ("policy", policy.name),
+                                ("type", "handoff"),
+                                ("status", "valid"),
+                            )
+                        ),
+                        SuffixCountStat(
+                            stat_dict["suffixes"]["primary"]["invalid"], now, (
+                                ("device", self.disk.name),
+                                ("policy", policy.name),
+                                ("type", "primary"),
+                                ("status", "invalid"),
+                            )
+                        ),
+                        SuffixCountStat(
+                            stat_dict["suffixes"]["handoff"]["invalid"], now, (
+                                ("device", self.disk.name),
+                                ("policy", policy.name),
+                                ("type", "handoff"),
+                                ("status", "invalid"),
+                            )
+                        ),
+                    )
+                else:  # A/C ring
+                    stats.update(
+                        SuffixCountStat(
+                            stat_dict["suffixes"]["primary"]["invalid"], now, (
+                                ("device", self.disk.name),
+                                ("policy", policy.name),
+                                ("type", "primary"),
+                            )
+                        ),
+                        SuffixCountStat(
+                            stat_dict["suffixes"]["handoff"]["invalid"], now, (
+                                ("device", self.disk.name),
+                                ("policy", policy.name),
+                                ("type", "handoff"),
+                            )
+                        ),
+                    )
+
                 if self.manager.track_hashdirs:
                     stats.update(
                         HashdirCountStat(
