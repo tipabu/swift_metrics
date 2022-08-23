@@ -97,6 +97,10 @@ class ProcessTracker(Tracker):
                 (t(v) for v, t in zip(line.split(None, 8), (
                     int, int, int, float, int, int, int, int, str)))
 
+            if cmdline.startswith('['):
+                # defunct process (at least, usually)
+                continue
+
             cmdname, _, args = cmdline.partition(' ')
             if 'python' in cmdname:
                 cmdname, _, args = args.partition(' ')
