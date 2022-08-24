@@ -34,6 +34,8 @@ class HashdirCountStat(Stat):
 
 class SwiftRingAssignmentTracker(Tracker):
     def configure(self, conf: typing.Dict[str, str]) -> None:
+        swift.common.utils.DEFAULT_LOCK_TIMEOUT = float(
+            conf.get('lock_timeout', '60'))
         self.devices_path = pathlib.Path(conf.get('devices', '/srv/node'))
         self.rings = {
             os.path.basename(r).split('.')[0]: swift.common.ring.Ring(r)
