@@ -4,6 +4,7 @@ import pathlib
 import queue
 import typing
 
+import swift.common.exceptions
 import swift.common.ring  # type: ignore
 import swift.common.utils  # type: ignore
 import swift.obj.diskfile  # type: ignore
@@ -125,7 +126,10 @@ class SwiftDiskRingAssignmentTracker(Tracker):
 
                     hashes = {'valid': False}
                     if policy.name.startswith('object'):
-                        hashes = swift.obj.diskfile.consolidate_hashes(part)
+                        try:
+                            hashes = swift.obj.diskfile.consolidate_hashes(part)
+                        except swift.common.exceptions.LockTimeout:
+                            hashes = swift.obj.diskfile.read_hashes(part)
                     if hashes['valid']:
                         for h in hashes:
                             if not swift.obj.diskfile.valid_suffix(h):
