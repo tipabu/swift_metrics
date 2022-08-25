@@ -10,6 +10,7 @@ import queue
 import sys
 import threading
 import time
+import urllib.parse
 import wsgiref.simple_server
 
 
@@ -59,7 +60,12 @@ if 'server' in sys.argv or 'serve' in sys.argv:
         if env['PATH_INFO'] != '/metrics':
             start_response('404 Not Found', [('Content-Type', 'text/plain')])
             return [b'Not Found']
-        body = m.get_stats().doc().encode('utf-8')
+        params = urllib.parse.parse_qs(env.get('QUERY_STRING'))
+        stats = m.get_stats()
+        if 'name' in params:
+            stats = WriteOnceStatCollection(
+                s for s in stats if s.name in params['name'])
+        body = stats.doc().encode('utf-8')
         start_response('200 OK', [
             ('Content-Length', str(len(body))),
             ('Content-Type', 'text/plain'),
