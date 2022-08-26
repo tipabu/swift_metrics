@@ -3,6 +3,7 @@ from . import StatCollection
 from . import WriteOnceStatCollection
 from .df_stats import DiskTracker
 from .iptables_counters import IPTablesTracker
+from .ntp_stats import TimeSyncTracker
 from .process_info import ProcessTracker
 from .swift_stats import SwiftRingAssignmentTracker
 
@@ -20,6 +21,7 @@ class Manager(threading.Thread):
         IPTablesTracker,
         SwiftRingAssignmentTracker,
         ProcessTracker,
+        TimeSyncTracker,
     )
     MAX_AGE = 150  # seconds
 
