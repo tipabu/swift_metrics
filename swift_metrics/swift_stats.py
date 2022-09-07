@@ -1,6 +1,7 @@
 import glob
 import os
 import pathlib
+import pickle
 import queue
 import typing
 
@@ -33,6 +34,10 @@ class HashdirCountStat(Stat):
     help = "Primary/handoff hashdir count"
 
 
+class ColsolidateFailure(RuntimeError):
+    pass
+
+
 class SwiftRingAssignmentTracker(Tracker):
     def configure(self, conf: typing.Dict[str, str]) -> None:
         swift.common.utils.DEFAULT_LOCK_TIMEOUT = float(
@@ -50,6 +55,7 @@ class SwiftRingAssignmentTracker(Tracker):
                 # but this was handy
                 'disk': disk,
                 'manager': self,
+                'user': conf.get('user', 'swift'),
             }) for disk in self.devices_path.iterdir()
         ]
         self.stats = StatCollection()
@@ -75,6 +81,27 @@ class SwiftRingAssignmentTracker(Tracker):
 
         return WriteOnceStatCollection(self.stats)
 
+def consolidate_hashes(swift_user, part_path):
+    r, w = os.pipe()
+    child_pid = os.fork()
+    if child_pid:
+        os.close(w)
+        try:
+            os.waitid(os.P_PID, child_pid, os.WEXITED)
+            return pickle.loads(os.read(r, 2 ** 20))
+        except Exception:
+            raise ColsolidateFailure
+        finally:
+            os.close(r)
+    else:
+        try:
+            os.close(r)
+            swift.common.utils.drop_privileges(swift_user)
+            hashes = swift.obj.diskfile.consolidate_hashes(part_path)
+            os.write(w, pickle.dumps(hashes))
+        finally:
+            os.close(w)
+            os._exit(0)
 
 class SwiftDiskRingAssignmentTracker(Tracker):
     interval = 60  # seconds
@@ -82,6 +109,7 @@ class SwiftDiskRingAssignmentTracker(Tracker):
     def configure(self, conf: typing.Dict[str, typing.Any]) -> None:
         self.disk = conf['disk']
         self.manager = conf['manager']
+        self.swift_user = conf['user']
 
     def scrape_time_labels(self) -> typing.Tuple[typing.Tuple[str, str], ...]:
         return super().scrape_time_labels() + (
@@ -127,8 +155,8 @@ class SwiftDiskRingAssignmentTracker(Tracker):
                     hashes = {'valid': False}
                     if policy.name.startswith('object'):
                         try:
-                            hashes = swift.obj.diskfile.consolidate_hashes(part)
-                        except swift.common.exceptions.LockTimeout:
+                            hashes = consolidate_hashes(self.swift_user, part)
+                        except ColsolidateFailure:
                             hashes = swift.obj.diskfile.read_hashes(part)
                     if hashes['valid']:
                         for h in hashes:
