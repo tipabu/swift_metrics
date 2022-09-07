@@ -1,4 +1,8 @@
 from __future__ import annotations
+
+import eventlet
+eventlet.monkey_patch()
+
 import collections.abc
 import dataclasses
 import io
