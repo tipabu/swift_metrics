@@ -48,7 +48,9 @@ class Manager(threading.Thread):
     def get_stats(self) -> WriteOnceStatCollection:
         for t in self.workers:
             t.ever_reported.wait()
-        while not self.statq.empty():
+        for _ in range(3):
+            if self.statq.empty():
+                break
             time.sleep(0.05)
         return WriteOnceStatCollection(self.stats)
 
