@@ -154,9 +154,12 @@ class SwiftDiskRingAssignmentTracker(Tracker):
 
                     hashes = {'valid': False}
                     if policy.name.startswith('object'):
-                        try:
-                            hashes = consolidate_hashes(self.swift_user, part)
-                        except ColsolidateFailure:
+                        if self.ever_reported.is_set():
+                            try:
+                                hashes = consolidate_hashes(self.swift_user, part)
+                            except ColsolidateFailure:
+                                hashes = swift.obj.diskfile.read_hashes(part)
+                        else:
                             hashes = swift.obj.diskfile.read_hashes(part)
                     if hashes['valid']:
                         for h in hashes:
