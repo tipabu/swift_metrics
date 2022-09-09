@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import eventlet
+import eventlet.hubs
+eventlet.hubs.use_hub('poll')
 eventlet.monkey_patch()
 
 import collections.abc
