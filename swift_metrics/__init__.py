@@ -9,6 +9,7 @@ import io
 import queue
 import threading
 import time
+import traceback
 import typing
 
 
@@ -151,7 +152,12 @@ class Tracker(threading.Thread):
         while True:
             start = time.time()
             any_stats = False
-            for stat in self.get_stats():
+            try:
+                stats = self.get_stats()
+            except Exception:
+                traceback.print_exc()
+                stats = WriteOnceStatCollection()
+            for stat in stats:
                 self.stats_queue.put(stat)
                 any_stats = True
             if any_stats:
