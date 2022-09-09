@@ -38,12 +38,13 @@ class Manager(threading.Thread):
         last = time.time()
         while all(t.is_alive() for t in self.workers):
             self.stats.update(self.statq.get())
-            if time.time() - last > self.MAX_AGE:
+            now = time.time()
+            if now - last > self.MAX_AGE:
                 self.stats.prune(self.MAX_AGE * 1000)
                 last = min(
                     (s.timestamp / 1000 for s in self.stats
                      if s.timestamp is not None),
-                    default=time.time())
+                    default=now)
 
     def get_stats(self) -> WriteOnceStatCollection:
         for t in self.workers:
