@@ -1,3 +1,4 @@
+import fcntl
 import glob
 import os
 import pathlib
@@ -86,12 +87,16 @@ def consolidate_hashes(swift_user, part_path):
     child_pid = os.fork()
     if child_pid:
         os.close(w)
+        # You can't create a pipe in non-blocking mode; you must set it
+        # later.
+        rflags = fcntl.fcntl(r, fcntl.F_GETFL)
+        fcntl.fcntl(r, fcntl.F_SETFL, rflags | os.O_NONBLOCK)
         try:
-            os.waitid(os.P_PID, child_pid, os.WEXITED)
             return pickle.loads(os.read(r, 2 ** 20))
         except Exception:
             raise ColsolidateFailure
         finally:
+            os.waitid(os.P_PID, child_pid, os.WEXITED)
             os.close(r)
     else:
         try:
