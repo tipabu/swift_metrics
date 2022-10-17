@@ -229,6 +229,9 @@ def get_connection_stats(pid: int) -> typing.Dict[str, typing.Any]:
         port = conn['local'][1]
         if is_swift_port(port) or port == RSYNC_PORT:
             port_dict = result.setdefault('server', {}).setdefault(port, {})
+        elif 'remote' not in conn:
+            print(f'Found unexpected connection {conn}')
+            continue
         else:
             port = conn['remote'][1]
             if not is_swift_port(port) and port not in (MEMCACHE_PORT, RSYNC_PORT):
