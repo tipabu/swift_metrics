@@ -6,6 +6,7 @@ from .iptables_counters import IPTablesTracker
 from .ntp_stats import TimeSyncTracker
 from .process_info import ProcessTracker
 from .swift_stats import SwiftRingAssignmentTracker
+from .swift_statsd_metrics import StatsdTracker
 from .swift_object_replication import SwiftObjectReplicationTracker
 
 import queue
@@ -22,6 +23,7 @@ class Manager(threading.Thread):
         IPTablesTracker,
         SwiftRingAssignmentTracker,
         SwiftObjectReplicationTracker,
+        StatsdTracker,
         ProcessTracker,
         TimeSyncTracker,
     )
