@@ -1,6 +1,7 @@
 import itertools
 import os
 import subprocess
+import sys
 import typing
 
 from . import categorize_destination_port
@@ -230,12 +231,12 @@ def get_connection_stats(pid: int) -> typing.Dict[str, typing.Any]:
         if is_swift_port(port) or port == RSYNC_PORT:
             port_dict = result.setdefault('server', {}).setdefault(port, {})
         elif 'remote' not in conn:
-            print(f'Found unexpected connection {conn}')
+            print(f'Found unexpected connection {conn}', file=sys.stderr)
             continue
         else:
             port = conn['remote'][1]
             if not is_swift_port(port) and port not in (MEMCACHE_PORT, RSYNC_PORT):
-                print(f'Found unexpected connection {conn}')
+                print(f'Found unexpected connection {conn}', file=sys.stderr)
                 continue
             port_dict = result.setdefault('client', {}).setdefault(port, {})
 
