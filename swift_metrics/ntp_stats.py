@@ -38,7 +38,7 @@ def parse_time(time_str):
     if time_str.endswith('ms'):
         return int(float(time_str[:-2]) * 1e3)
     if time_str.endswith('s'):
-        return int(float(time_str[:-2]) * 1e6)
+        return int(float(time_str[:-1]) * 1e6)
     if time_str in ('0', '-0'):
         return 0
     raise ValueError(f'Could not parse time: {time_str!r}')
