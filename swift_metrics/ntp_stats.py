@@ -63,11 +63,14 @@ class TimeSyncTracker(Tracker):
                 info[key.strip()] = value
 
         now = Stat.now()
-        return WriteOnceStatCollection((
-            DistanceStat(parse_time(info['Root distance']), now),
-            OffsetStat(parse_time(info['Offset']), now),
-            DelayStat(parse_time(info['Delay']), now),
-            JitterStat(parse_time(info['Jitter']), now),
+        return WriteOnceStatCollection(
+            cls(parse_time(info[key]), now)
+            for key, cls in (
+                ('Root distance', DistanceStat),
+                ('Offset', OffsetStat),
+                ('Delay', DelayStat),
+                ('Jitter', JitterStat),
+            ) if key in info
         ))
 
 
