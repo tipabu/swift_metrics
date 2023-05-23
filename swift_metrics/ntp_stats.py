@@ -33,6 +33,11 @@ class JitterStat(Stat):
 def parse_time(time_str):
     # Root distance line can include "(max: X)"
     time_str = time_str.partition('(')[0].strip()
+    if 'min' in time_str:
+        m, s = time_str.partition('min')[::2]
+        m = int(m) * 60
+        s = float(s[:-1])
+        return int((m + s) * 1e6)
     if time_str.endswith('us'):
         return int(time_str[:-2])
     if time_str.endswith('ms'):
