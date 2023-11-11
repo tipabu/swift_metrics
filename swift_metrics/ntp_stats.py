@@ -71,7 +71,7 @@ class TimeSyncTracker(Tracker):
                 ('Delay', DelayStat),
                 ('Jitter', JitterStat),
             ) if key in info
-        ))
+        )
 
 
 if __name__ == "__main__":
