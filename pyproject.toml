@@ -1,0 +1,8 @@
+[project]
+name = "swift_metrics"
+version = "0.4"
+description = "Collect metrics around OpenStack Swift and expose them as a prom endpoint"
+dependencies = [
+    "eventlet",
+    "swift"
+]
